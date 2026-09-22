@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Catatan Pesanan Konsumen</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           1. CSS VARIABLES (TEMA TOKOPEDIA)
+           ========================================= */
+        :root {
+            --bg-body: #f3f4f5;
+            --bg-card: #ffffff;
+            --primary: #00AA5B;
+            --primary-hover: #008C4A;
+            --accent: #00AA5B;
+            --success: #00AA5B;
+            --danger: #EF144A;
+            --danger-hover: #D11141;
+            --price: #FA591D;
+            --text-main: #31353B;
+            --text-muted: #6D7588;
+            --border: #E5E7E9;
+            --radius: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* =========================================
+           2. GLOBAL STYLES
+           ========================================= */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        h2, h3, h4 { color: var(--text-main); margin: 0 0 15px 0; font-weight: 700; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 15px 0; }
+
+        button {
+            font-family: 'Inter', sans-serif;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        button:active { transform: scale(0.97); }
+
+        /* =========================================
+           3. LAYOUT & GLASSMORPHISM HEADER
+           ========================================= */
+        .sticky-input-area {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 1005;
+            padding: 20px 15px 15px;
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .content-area { padding: 20px 15px 40px; max-width: 600px; margin: 0 auto; }
+
+        /* =========================================
+           4. FORM INPUTS
+           ========================================= */
+        .input-group { margin-bottom: 10px; position: relative; }
+        .input-group input {
+            width: 100%;
+            background-color: var(--bg-card);
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 170, 91, 0.15);
+        }
+        .input-group input::placeholder { color: #94a3b8; }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        /* =========================================
+           5. KARTU NOTA & LIST
+           ========================================= */
+        .pesanan-container, .pembelian-container, .cloud-container {
+            position: relative;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            transition: margin 0.2s, background-color 0.3s, border-color 0.3s;
+        }
+
+        .header-kios-wrapper {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            transition: margin-bottom 0.2s;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            font-size: 20px;
+            color: #94a3b8;
+            margin-right: 12px;
+            padding: 4px 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            background-color: #f1f5f9;
+            transition: var(--transition);
+            touch-action: none;
+        }
+
+        #daftarPesanan:not(.mode-ringkas) .drag-handle {
+            pointer-events: none;
+            opacity: 0.3;
+            background-color: transparent;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+            background-color: #e2e8f0;
+            color: var(--primary);
+        }
+
+        .nama-header {
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: inline-block;
+            padding-bottom: 2px;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+        }
+        .nama-header:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+        .scrollable {
+            max-height: 320px;
+            overflow-y: auto;
+            background-color: #ffffff;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .scrollable::-webkit-scrollbar { width: 6px; }
+        .scrollable::-webkit-scrollbar-track { background: transparent; }
+        .scrollable::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .scrollable::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .total-harga {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 15px;
+            border-top: 1px dashed var(--border);
+            padding-top: 15px;
+            color: var(--price);
+            text-align: right;
+        }
+
+        /* =========================================
+           6. TOMBOL (Buttons)
+           ========================================= */
+        .btn-main { background-color: var(--primary); color: white; padding: 14px; width: 100%; font-size: 16px; margin-top: 5px;}
+        .btn-main:hover { background-color: var(--primary-hover); }
+
+        .btn-action { background-color: #f1f5f9; color: var(--text-main); padding: 8px 16px; border: 1px solid var(--border); font-size: 13px; margin-right: 5px; margin-top: 10px;}
+        .btn-action:hover { background-color: #e2e8f0; }
+
+        .btn-danger { background-color: var(--bg-card); color: var(--danger); border: 1px solid var(--danger); padding: 8px 16px; font-size: 13px;}
+        .btn-danger:hover { background-color: var(--danger); color: white; }
+
+        .btn-varian {
+            padding: 8px 14px;
+            border-radius: 20px;
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            margin: 0;
+        }
+        .btn-varian.active {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 2px 4px rgba(0, 170, 91, 0.3);
+        }
+
+        .btn-delete-item {
+            background-color: #fee2e2;
+            color: var(--danger);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .btn-delete-item:hover { background-color: #fca5a5; color: white; }
+
+        /* =========================================
+           7. FITUR "MODE RINGKAS" & "GHOSTING DRAG"
+           ========================================= */
+        #daftarPesanan.mode-ringkas .scrollable,
+        #daftarPesanan.mode-ringkas .total-harga,
+        #daftarPesanan.mode-ringkas .btn-action-group {
+            display: none !important;
+        }
+        #daftarPesanan.mode-ringkas .pesanan-container {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+        }
+        #daftarPesanan.mode-ringkas .header-kios-wrapper {
+            margin-bottom: 0;
+        }
+
+        .nota-mengambang {
+            opacity: 0.95 !important;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2) !important;
+            z-index: 9999 !important;
+            background-color: var(--bg-card) !important;
+            cursor: grabbing !important;
+        }
+        #daftarPesanan.mode-ringkas .nota-mengambang .scrollable,
+        #daftarPesanan.mode-ringkas .nota-mengambang .total-harga,
+        #daftarPesanan.mode-ringkas .nota-mengambang .btn-action-group {
+            display: none !important;
+        }
+
+        /* =========================================
+           8. ITEM BARANG & SISTEM PAKING
+           ========================================= */
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 10px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.2s, opacity 0.2s;
+        }
+        .item-row:last-child { border-bottom: none; }
+        .item-row:active { background-color: #f8fafc; }
+
+        .item-info { flex-grow: 1; font-size: 14px; line-height: 1.5; pointer-events: none; }
+        .item-price-calc { color: var(--price); font-weight: 600; font-size: 14px; white-space: nowrap; margin-left: 15px; pointer-events: none;}
+
+        .item-row.item-dikemas {
+            background-color: #f1f5f9;
+            border-radius: 8px;
+        }
+        .item-row.item-dikemas .item-info strong {
+            color: var(--text-main);
+        }
+
+        .suplier-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+            margin-left: 15px;
+        }
+        .suplier-item-checked { text-decoration: line-through; color: var(--text-muted); opacity: 0.6; }
+
+        /* =========================================
+           9. INDIKATOR KIOS (Warna & Kedipan Paking)
+           ========================================= */
+        .tanda-kios-container { position: absolute; top: 15px; right: 15px; display: flex; gap: 6px; }
+        .tanda-kios-button { width: 16px; height: 16px; border-radius: 50%; padding: 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);}
+        .tanda-hijau { background-color: var(--success); }
+        .tanda-pink { background-color: #ec4899; }
+
+        .kios-hijau { border-left-color: var(--success) !important; background-color: rgba(0, 170, 91, 0.05) !important; }
+        .kios-pink { border-left-color: #ec4899 !important; background-color: rgba(236, 72, 153, 0.05) !important; }
+
+        @keyframes kedip-tajam {
+            0%, 49% { border-left-color: #ec4899; }
+            50%, 100% { border-left-color: transparent; }
+        }
+        .kios-packing-progress {
+            background-color: rgba(236, 72, 153, 0.05) !important;
+            animation: kedip-tajam 0.7s infinite !important;
+        }
+
+        /* =========================================
+           10. FITUR KHUSUS (Total, Cloud, HTML2Canvas)
+           ========================================= */
+        .grand-total-container {
+            background: linear-gradient(135deg, #00AA5B 0%, #008C4A 100%);
+            color: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 25px;
+        }
+        .grand-total-value { font-size: 2rem; font-weight: 700; color: #ffffff; }
+
+        .rekomendasi {
+            position: absolute; background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+            box-shadow: var(--shadow-md); max-height: 200px; overflow-y: auto; width: 100%; z-index: 1000;
+            margin-top: 5px; display: none;
+        }
+        .rekomendasi div { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 14px; transition: var(--transition);}
+        .rekomendasi div:hover { background-color: #f8fafc; color: var(--accent); font-weight: 500;}
+
+        #notifikasi {
+            display: none; background-color: var(--success); color: white; padding: 8px 16px; border-radius: 20px;
+            font-size: 12px; font-weight: 600; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            z-index: 1010; box-shadow: var(--shadow-md);
+        }
+
+        .nota-diangkat { box-shadow: var(--shadow-md) !important; transform: scale(1.02); z-index: 9999; border-color: var(--accent) !important; }
+        .nota-bayangan { opacity: 0.3; background-color: #f8fafc; }
+
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+        .nota { font-family: 'Roboto Mono', monospace; width: 500px; box-sizing: border-box; background: white; padding: 20px; color: #000; text-align: left; line-height: 1.4; }
+        .nota h2, .nota h3 { text-align: center; margin: 5px 0; color: #000;}
+        .nota .line { border-bottom: 1px dashed #000; margin: 10px 0; }
+        .nota .item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
+        .nota .total { font-weight: bold; text-align: right; font-size: 16px; }
+        .nota .footer { text-align: center; margin-top: 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="sticky-input-area">
+        <div style="max-width: 600px; margin: 0 auto; position: relative;">
+            <center><h2>INPUT PESANAN</h2></center>
+            <div id="notifikasi">✓ Berhasil di input</div>
+
+            <div class="input-group">
+                <input type="text" id="namaPemesan" placeholder="Nama Konsumen / Kios">
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="inputBarang" placeholder="Ketik nama barang...">
+                <div id="rekomendasiBarang" class="rekomendasi"></div>
+            </div>
+
+            <div id="containerVarian" style="display: none; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; padding: 0 4px;"></div>
+            <input type="hidden" id="pilihVarian">
+
+            <div class="input-group">
+                <input type="number" id="jumlah" placeholder="Jumlah Pesanan" min="0.1" step="0.1" inputmode="decimal">
+            </div>
+
+            <input type="hidden" id="satuanTampil">
+            <input type="hidden" id="hargaTampil">
+            <input type="hidden" id="hargaAsli">
+            <input type="hidden" id="hargaSatuanAsli">
+            <input type="hidden" id="supplierAsli">
+            <input type="hidden" id="total">
+
+            <button onclick="tambahPesanan()" class="btn-main">Tambah Pesanan</button>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <center><h3 style="margin-top: 10px; color: var(--text-muted); font-size: 14px;">NOTA KONSUMEN</h3></center>
+
+        <!-- TOMBOL MODE RINGKAS & HAPUS -->
+        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+            <button onclick="toggleModeRingkas()" id="btnModeRingkas" class="btn-action" style="margin: 0; flex: 1; border-color: var(--accent); color: var(--accent); font-weight: 600;">👁️ Mode Ringkas</button>
+            <button onclick="hapusSemuaPesanan()" class="btn-action btn-danger" style="margin: 0; flex: 1; border-color: #fca5a5;">🗑️ Hapus Semua Nota</button>
+        </div>
+
+        <div id="daftarPesanan"></div>
+
+        <div id="grandTotalArea" class="grand-total-container" style="display: none;">
+            <div style="font-size: 12px; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Estimasi Pendapatan</div>
+            <div class="grand-total-value" id="grandTotalValue">Rp0</div>
+        </div>
+
+        <center><h3 style="margin-top: 40px; color: var(--text-muted); font-size: 14px;">REKAP SUPLIER</h3></center>
+        <div id="daftarPembelian"></div>
+
+        <!-- BAGIAN CLOUD SYNC GOOGLE SHEET -->
+        <div class="cloud-container" style="text-align: center; margin-top: 30px; border: 2px solid var(--border);">
+            <h4 style="margin-top: 0; color: var(--text-main);">☁️ Sinkronisasi Cloud</h4>
+            <input type="text" id="identitasSales" placeholder="ID / Nama Sales" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; text-align: center; font-weight: 600; text-transform: uppercase; box-sizing: border-box; background: #f8fafc;">
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="eksporDataKeSheet()" style="background-color: var(--primary); color: white; width: 50%; padding: 12px; font-size: 14px;">Upload Data</button>
+                <button onclick="imporDataDariSheet()" style="background-color: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); width: 50%; padding: 12px; font-size: 14px;">Tarik Data</button>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; line-height: 1.4;">Data dicadangkan ke Google Sheet. Gunakan ID yang sama untuk menarik kembali data jika perangkat tereset.</div>
+        </div>
+    </div>
+
+    <script>
+        const URL_GAS_API = "https://script.google.com/macros/s/AKfycbwAWJIX1e4wYhmm9BiBI0fgZWmur3TGgmydOy6FCfrALUKIGBDwLXwKDtPwEvqs0hVAkA/exec";
+
+        let pesananPerKonsumen = {};
+        let pembelian = {};
+        let daftarKios = [];
+        let katalogData = [];
+        let klikCounter = {};
+        let alihanSuplier = {};
+        let isModeRingkas = false;
+
+        const SHEET_ID = "12dmJadrRGYoTKg_nOA4GoCwlntjjO2EjG0tYCz-yFss";
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+        function muatDataDariLocalStorage() {
+            let storedPesanan = localStorage.getItem("pesananPerKonsumen");
+            if (storedPesanan) pesananPerKonsumen = JSON.parse(storedPesanan);
+
+            let storedDaftarKios = localStorage.getItem("daftarKios");
+            if (storedDaftarKios) {
+                daftarKios = JSON.parse(storedDaftarKios);
+            } else {
+                for (let namaKios in pesananPerKonsumen) {
+                    if (!daftarKios.includes(namaKios)) daftarKios.unshift(namaKios);
+                }
+                localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+            }
+
+            let storedPembelian = localStorage.getItem("pembelian");
+            if (storedPembelian) {
+                pembelian = JSON.parse(storedPembelian);
+            } else {
+                pembelian = { "SUP SR": {}, "SUP BL": {}, "SUP APL": {}, "SUP BB": {} };
+                localStorage.setItem("pembelian", JSON.stringify(pembelian));
+            }
+
+            let storedAlihan = localStorage.getItem("alihanSuplier");
+            if (storedAlihan) alihanSuplier = JSON.parse(storedAlihan);
+        }
+
+        async function muatDataDariKatalog() {
+            try {
+                const response = await fetch(SHEET_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const text = await response.text();
+                const startIndex = text.indexOf('{');
+                const endIndex = text.lastIndexOf('}');
+                if (startIndex === -1 || endIndex === -1) throw new Error("Format data gviz tidak valid.");
+
+                const dataJSON = JSON.parse(text.substring(startIndex, endIndex + 1));
+                const rows = dataJSON.table.rows;
+                katalogData = [];
+
+                rows.forEach(row => {
+                    const c = row.c;
+                    if (!c || !c[0] || !c[0].v) return;
+                    let namaBarang = c[0].v.toString().trim();
+                    if (namaBarang.toLowerCase() === "nama barang") return;
+
+                    let harga = c[1] && c[1].v ? parseFloat(c[1].v) : 0;
+                    let hargaSatuan = c[2] && c[2].v ? parseFloat(c[2].v) : 0;
+                    let satuan = c[8] && c[8].v ? c[8].v.toString().trim() : "Pcs";
+                    let kodeSuplier = c[10] && c[10].v ? c[10].v.toString().trim() : "";
+
+                    let namaToko = "SUP BB";
+                    if (kodeSuplier === "SR") namaToko = "SUP SR";
+                    else if (kodeSuplier === "BL") namaToko = "SUP BL";
+                    else if (kodeSuplier === "APL") namaToko = "SUP APL";
+                    else if (kodeSuplier === "BB") namaToko = "SUP BB";
+
+                    // LOGIKA BARU: Mengambil variasi dari Kolom L (index 11) dan memisahkannya dengan koma
+                    let varian = [];
+                    if (c[11] && c[11].v && c[11].v.toString().trim() !== "") {
+                        let varianString = c[11].v.toString();
+                        // Memisahkan berdasarkan koma, lalu membersihkan spasi awal/akhir setiap varian
+                        varian = varianString.split(',').map(v => v.trim()).filter(v => v !== "");
+                    }
+
+                    katalogData.push({ nama: namaBarang, harga: harga, hargaSatuan: hargaSatuan, satuan: satuan, supplier: namaToko, varian: varian });
+                });
+                localStorage.setItem("katalogData", JSON.stringify(katalogData));
+            } catch (error) {
+                const storedData = localStorage.getItem("katalogData");
+                if (storedData) katalogData = JSON.parse(storedData);
+            }
+        }
+
+        function formatAngka(angka) {
+            if (!angka || angka === "0" || angka === 0) return '0';
+            return Number(angka).toLocaleString('id-ID');
+        }
+
+        function hitungTotalPesanan() {
+            let jumlah = parseFloat(document.getElementById("jumlah").value) || 0;
+            let harga = parseFloat(document.getElementById("hargaAsli").value) || 0;
+            let total = jumlah * harga;
+            document.getElementById("total").value = total > 0 ? "Rp" + formatAngka(total) : "";
+        }
+
+        function hitungDanTampilkanGrandTotal() {
+            let totalSemua = 0;
+            for (let kios in pesananPerKonsumen) {
+                if (pesananPerKonsumen[kios] && pesananPerKonsumen[kios].totalHarga) {
+                    totalSemua += pesananPerKonsumen[kios].totalHarga;
+                }
+            }
+            const grandTotalElement = document.getElementById("grandTotalValue");
+            const grandTotalArea = document.getElementById("grandTotalArea");
+
+            if (grandTotalElement) grandTotalElement.innerText = `Rp${totalSemua.toLocaleString('id-ID')}`;
+            if (grandTotalArea) grandTotalArea.style.display = (Object.keys(pesananPerKonsumen).length > 0 && totalSemua > 0) ? "block" : "none";
+        }
+
+        function sinkronkanDaftarKios() {
+            for (let namaKios in pesananPerKonsumen) {
+                if (!daftarKios.includes(namaKios)) daftarKios.unshift(namaKios);
+            }
+            daftarKios = daftarKios.filter(kios => pesananPerKonsumen[kios]);
+            localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+        }
+
+        function toggleModeRingkas() {
+            let container = document.getElementById("daftarPesanan");
+            let btn = document.getElementById("btnModeRingkas");
+            isModeRingkas = !isModeRingkas;
+
+            if (isModeRingkas) {
+                container.classList.add("mode-ringkas");
+                btn.innerHTML = "📖 Tampilkan Detail";
+                btn.style.backgroundColor = "var(--accent)";
+                btn.style.color = "white";
+            } else {
+                container.classList.remove("mode-ringkas");
+                btn.innerHTML = "👁️ Mode Ringkas";
+                btn.style.backgroundColor = "#f1f5f9";
+                btn.style.color = "var(--accent)";
+            }
+        }
+
+        function perbaruiKelasKios(namaKios) {
+            let div = document.getElementById(`pesanan-${namaKios}`);
+            if (!div) return;
+
+            div.classList.remove('kios-hijau', 'kios-pink', 'kios-packing-progress');
+
+            let statusKios = localStorage.getItem(`statusKios_${namaKios}`);
+            let allPacked = true;
+            let hasItems = pesananPerKonsumen[namaKios] && pesananPerKonsumen[namaKios].items.length > 0;
+
+            if (hasItems) {
+                for (let item of pesananPerKonsumen[namaKios].items) {
+                    if (!item.dikemas) { allPacked = false; break; }
+                }
+            }
+
+            if (statusKios === 'hijau') {
+                div.classList.add('kios-hijau');
+            } else if (statusKios === 'pink') {
+                if (!allPacked && hasItems) div.classList.add('kios-packing-progress');
+                else div.classList.add('kios-pink');
+            }
+        }
+
+        function updatePesananUI() {
+            let container = document.getElementById("daftarPesanan");
+            container.innerHTML = "";
+
+            for (let namaPemesan of daftarKios) {
+                if (!pesananPerKonsumen[namaPemesan]) continue;
+
+                let div = document.createElement("div");
+                div.classList.add("pesanan-container");
+                div.setAttribute("id", `pesanan-${namaPemesan}`);
+                div.setAttribute("data-kios", namaPemesan);
+
+                let tandaContainer = document.createElement("div");
+                tandaContainer.classList.add("tanda-kios-container");
+
+                let tombolHijau = document.createElement("button");
+                tombolHijau.classList.add("tanda-kios-button", "tanda-hijau");
+                tombolHijau.onclick = function() { tandaiKios(namaPemesan, 'hijau'); };
+
+                let tombolPink = document.createElement("button");
+                tombolPink.classList.add("tanda-kios-button", "tanda-pink");
+                tombolPink.onclick = function() { tandaiKios(namaPemesan, 'pink'); };
+
+                tandaContainer.appendChild(tombolHijau);
+                tandaContainer.appendChild(tombolPink);
+                div.appendChild(tandaContainer);
+
+                let headerKiosWrapper = document.createElement("div");
+                headerKiosWrapper.classList.add("header-kios-wrapper");
+
+                let dragHandle = document.createElement("div");
+                dragHandle.classList.add("drag-handle");
+                dragHandle.innerHTML = "☰";
+                dragHandle.title = "Tahan dan geser saat mode ringkas aktif";
+
+                let title = document.createElement("div");
+                title.classList.add("nama-header");
+                title.style.marginBottom = "0";
+                title.textContent = namaPemesan;
+                title.onclick = function() { document.getElementById("namaPemesan").value = namaPemesan; };
+
+                headerKiosWrapper.appendChild(dragHandle);
+                headerKiosWrapper.appendChild(title);
+                div.appendChild(headerKiosWrapper);
+
+                let scrollableDiv = document.createElement("div");
+                scrollableDiv.classList.add("scrollable");
+                scrollableDiv.setAttribute("data-kios", namaPemesan);
+
+                let nomor = 1;
+                for (let item of pesananPerKonsumen[namaPemesan].items) {
+                    let itemContainer = document.createElement("div");
+                    itemContainer.classList.add("item-row");
+
+                    if (item.dikemas) {
+                        itemContainer.classList.add("item-dikemas");
+                    }
+
+                    let lastClickTime = 0;
+                    itemContainer.onclick = function(e) {
+                        if (e.target.tagName === 'BUTTON') return;
+
+                        let currentTime = new Date().getTime();
+                        if (currentTime - lastClickTime < 400) {
+                            let stKios = localStorage.getItem(`statusKios_${namaPemesan}`);
+                            if (stKios !== 'pink') return;
+
+                            item.dikemas = !item.dikemas;
+                            if(item.dikemas) {
+                                itemContainer.classList.add("item-dikemas");
+                            } else {
+                                itemContainer.classList.remove("item-dikemas");
+                            }
+
+                            localStorage.setItem("pesananPerKonsumen", JSON.stringify(pesananPerKonsumen));
+                            perbaruiKelasKios(namaPemesan);
+                        }
+                        lastClickTime = currentTime;
+                    };
+
+                    let totalHargaItem = item.harga * item.jumlah;
+
+                    let infoKiri = document.createElement("div");
+                    infoKiri.classList.add("item-info");
+
+                    let baris1 = document.createElement("div");
+                    baris1.innerHTML = `<strong>${nomor}. ${item.barang}</strong>`;
+
+                    let baris2 = document.createElement("div");
+                    baris2.style.color = "var(--text-muted)";
+                    baris2.style.fontSize = "13px";
+                    baris2.textContent = `${item.jumlah} ${item.satuan} x Rp${formatAngka(item.harga)}`;
+
+                    infoKiri.appendChild(baris1);
+                    infoKiri.appendChild(baris2);
+
+                    let infoKanan = document.createElement("div");
+                    infoKanan.style.display = "flex";
+                    infoKanan.style.alignItems = "center";
+
+                    let hargaTotalEl = document.createElement("div");
+                    hargaTotalEl.classList.add("item-price-calc");
+                    hargaTotalEl.textContent = `Rp${formatAngka(totalHargaItem)}`;
+
+                    let deleteButton = document.createElement("button");
+                    deleteButton.textContent = "✕";
+                    deleteButton.classList.add("btn-delete-item");
+
+                    let itemData = { barang: item.barang, jumlah: item.jumlah, satuan: item.satuan, harga: item.harga, supplier: item.supplier };
+                    deleteButton.onclick = (function(kios, itemCopy) {
+                        return function() { hapusBarang(kios, itemCopy); };
+                    })(namaPemesan, itemData);
+
+                    infoKanan.appendChild(hargaTotalEl);
+                    infoKanan.appendChild(deleteButton);
+
+                    itemContainer.appendChild(infoKiri);
+                    itemContainer.appendChild(infoKanan);
+                    scrollableDiv.appendChild(itemContainer);
+                    nomor++;
+                }
+
+                div.appendChild(scrollableDiv);
+
+                let totalHargaDiv = document.createElement("div");
+                totalHargaDiv.classList.add("total-harga");
+                totalHargaDiv.textContent = `Total: Rp${pesananPerKonsumen[namaPemesan].totalHarga.toLocaleString('id-ID')}`;
+                div.appendChild(totalHargaDiv);
+
+                let btnGroup = document.createElement("div");
+                btnGroup.classList.add("btn-action-group");
+                btnGroup.style.display = "flex";
+                btnGroup.style.gap = "8px";
+
+                let copyButton = document.createElement("button");
+                copyButton.textContent = "Salin";
+                copyButton.classList.add("btn-action");
+                copyButton.style.flex = "1";
+                copyButton.style.margin = "0";
+                copyButton.onclick = function() { salinCatatan(namaPemesan); };
+
+                let shareButton = document.createElement("button");
+                shareButton.textContent = "Bagikan";
+                shareButton.classList.add("btn-action");
+                shareButton.style.flex = "1";
+                shareButton.style.margin = "0";
+                shareButton.onclick = function() { bagikanCatatan(namaPemesan); };
+
+                let deleteKiosButton = document.createElement("button");
+                deleteKiosButton.textContent = "Hapus";
+                deleteKiosButton.classList.add("btn-action", "btn-danger");
+                deleteKiosButton.style.flex = "1";
+                deleteKiosButton.style.margin = "0";
+                deleteKiosButton.onclick = function() { hapusKios(namaPemesan); };
+
+                btnGroup.appendChild(copyButton);
+                btnGroup.appendChild(shareButton);
+                btnGroup.appendChild(deleteKiosButton);
+                div.appendChild(btnGroup);
+
+                container.appendChild(div);
+
+                perbaruiKelasKios(namaPemesan);
+            }
+
+            hitungDanTampilkanGrandTotal();
+        }
+
+        function hapusBarang(konsumen, item) {
+            Swal.fire({
+                title: 'Konfirmasi',
+                html: `Hapus <strong style="color:var(--danger)">${item.barang}</strong> dari nota ${konsumen}?`,
+                input: 'password', inputAttributes: { autocapitalize: 'off' },
+                showCancelButton: true, confirmButtonText: 'Hapus', cancelButtonText: 'Batal',
+                confirmButtonColor: '#ef4444',
+                preConfirm: (kode) => {
+                    if (kode === "ya") {
+                        try {
+                            const items = pesananPerKonsumen[konsumen].items;
+                            let indexToRemove = -1;
+                            for (let i = items.length - 1; i >= 0; i--) {
+                                const iItem = items[i];
+                                if (iItem.barang === item.barang && iItem.jumlah === item.jumlah && iItem.satuan === item.satuan) {
+                                    indexToRemove = i; break;
+                                }
+                            }
+                            if (indexToRemove === -1) throw new Error("Item tidak ditemukan");
+
+                            pesananPerKonsumen[konsumen].totalHarga -= (item.harga * item.jumlah);
+                            pesananPerKonsumen[konsumen].items.splice(indexToRemove, 1);
+                            if (pesananPerKonsumen[konsumen].items.length === 0) {
+                                delete pesananPerKonsumen[konsumen];
+                                daftarKios = daftarKios.filter(kios => kios !== konsumen);
+                                localStorage.removeItem(`statusKios_${konsumen}`);
+                            }
+
+                            localStorage.setItem("pesananPerKonsumen", JSON.stringify(pesananPerKonsumen));
+                            localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+
+                            updatePesananUI();
+
+                            let toko = item.supplier;
+                            let key = item.barang + " " + item.satuan;
+                            let hapusJumlah = item.jumlah;
+
+                            if (toko && pembelian[toko] && pembelian[toko][key] !== undefined) {
+                                pembelian[toko][key] -= hapusJumlah;
+                                if (pembelian[toko][key] <= 0) {
+                                    delete pembelian[toko][key];
+                                    let chk = JSON.parse(localStorage.getItem(`checkedItems_${toko}`)) || {};
+                                    if(chk[key]) {
+                                        delete chk[key];
+                                        localStorage.setItem(`checkedItems_${toko}`, JSON.stringify(chk));
+                                    }
+                                }
+                            }
+
+                            let currentSupHapus = toko;
+                            let loopSafeHapus = 0;
+                            while (alihanSuplier[`${currentSupHapus}|${key}`] && loopSafeHapus < 10) {
+                                let infoAlihan = alihanSuplier[`${currentSupHapus}|${key}`];
+                                let tokoTujuan = infoAlihan.dest;
+
+                                if (pembelian[tokoTujuan] && pembelian[tokoTujuan][key] !== undefined) {
+                                    pembelian[tokoTujuan][key] -= hapusJumlah;
+                                    if (pembelian[tokoTujuan][key] <= 0) {
+                                        delete pembelian[tokoTujuan][key];
+                                        let chkDest = JSON.parse(localStorage.getItem(`checkedItems_${tokoTujuan}`)) || {};
+                                        if(chkDest[key]) {
+                                            delete chkDest[key];
+                                            localStorage.setItem(`checkedItems_${tokoTujuan}`, JSON.stringify(chkDest));
+                                        }
+                                    }
+                                }
+                                infoAlihan.qty -= hapusJumlah;
+                                let keyUntukDihapus = `${currentSupHapus}|${key}`;
+                                currentSupHapus = tokoTujuan;
+                                if (infoAlihan.qty <= 0) delete alihanSuplier[keyUntukDihapus];
+                                loopSafeHapus++;
+                            }
+                            localStorage.setItem("pembelian", JSON.stringify(pembelian));
+                            localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+                            updatePembelianUI();
+                        } catch (error) { Swal.fire({icon: 'error', title: 'Oops...', text: 'Terjadi kesalahan saat menghapus.'}); }
+                    } else { Swal.fire({icon: 'error', title: 'Oops...', text: 'Password salah!'}); }
+                }
+            });
+        }
+
+        function hapusSemuaPesanan() {
+            if (Object.keys(pesananPerKonsumen).length === 0) {
+                Swal.fire({icon: 'info', title: 'Kosong', text: 'Tidak ada nota untuk dihapus.'});
+                return;
+            }
+            Swal.fire({
+                title: 'Bersihkan Semua Data?',
+                text: 'Masukkan password untuk menghapus semua pesanan dan rekap suplier:',
+                input: 'password', inputAttributes: { autocapitalize: 'off' },
+                showCancelButton: true, confirmButtonText: 'Hapus Semua', cancelButtonText: 'Batal',
+                confirmButtonColor: '#ef4444',
+                preConfirm: (kode) => {
+                    if (kode === "septa1") {
+                        pesananPerKonsumen = {}; daftarKios = [];
+                        pembelian = { "SUP SR": {}, "SUP BL": {}, "SUP APL": {}, "SUP BB": {} };
+                        alihanSuplier = {};
+
+                        localStorage.removeItem("pesananPerKonsumen");
+                        localStorage.removeItem("daftarKios");
+                        localStorage.removeItem("pembelian");
+                        localStorage.removeItem("alihanSuplier");
+
+                        let keysToRemove = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            let key = localStorage.key(i);
+                            if (key && (key.startsWith('statusKios_') || key.startsWith('checkedItems_'))) keysToRemove.push(key);
+                        }
+                        keysToRemove.forEach(k => localStorage.removeItem(k));
+                        updatePesananUI(); updatePembelianUI();
+                        Swal.fire({icon: 'success', title: 'Berhasil', text: 'Semua catatan telah dibersihkan!', timer: 1500, showConfirmButton: false});
+                    } else { Swal.fire({icon: 'error', title: 'Gagal', text: 'Password salah!'}); }
+                }
+            });
+        }
+
+        function updatePembelianUI() {
+            let container = document.getElementById("daftarPembelian");
+            let scrollPositions = {};
+            container.querySelectorAll('.pembelian-container').forEach(div => {
+                let toko = div.querySelector('.nama-header').textContent;
+                let scrollable = div.querySelector('.scrollable');
+                if (toko && scrollable) scrollPositions[toko] = scrollable.scrollTop;
+            });
+
+            container.innerHTML = "";
+            const daftarToko = ["SUP SR", "SUP BL", "SUP APL", "SUP BB"];
+
+            for (let toko of daftarToko) {
+                let div = document.createElement("div");
+                div.classList.add("pembelian-container");
+
+                let title = document.createElement("div");
+                title.classList.add("nama-header");
+                title.textContent = toko;
+                div.appendChild(title);
+
+                let scrollableDiv = document.createElement("div");
+                scrollableDiv.classList.add("scrollable");
+
+                let items = Object.entries(pembelian[toko] || {});
+                let checkedItems = JSON.parse(localStorage.getItem(`checkedItems_${toko}`)) || {};
+
+                items.forEach(([item, jumlah], i) => {
+                    let lastSpaceIndex = item.lastIndexOf(" ");
+                    let barang = item.substring(0, lastSpaceIndex);
+                    let satuan = item.substring(lastSpaceIndex + 1);
+
+                    let itemContainer = document.createElement("div");
+                    itemContainer.classList.add("item-row");
+                    itemContainer.dataset.itemKey = item;
+
+                    let itemDiv = document.createElement("div");
+                    itemDiv.classList.add("item-info");
+                    itemDiv.innerHTML = `<strong>${i + 1}. ${barang}</strong> <span style="color:var(--text-muted); margin-left:10px;">${jumlah} ${satuan}</span>`;
+
+                    let checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.classList.add("suplier-checkbox");
+
+                    if (checkedItems[item]) { checkbox.checked = true; itemDiv.classList.add("suplier-item-checked"); }
+
+                    checkbox.addEventListener("change", function(e) { toggleCheckItem(toko, item, jumlah, this.checked); });
+
+                    itemContainer.appendChild(itemDiv);
+                    itemContainer.appendChild(checkbox);
+                    scrollableDiv.appendChild(itemContainer);
+                });
+
+                if (items.length === 0) scrollableDiv.innerHTML = "<div style='color:var(--text-muted); font-size:13px; font-style:italic;'>Tidak ada data pesanan...</div>";
+                div.appendChild(scrollableDiv);
+
+                let btnContainer = document.createElement("div");
+                let resetBtn = document.createElement("button");
+                resetBtn.textContent = "Reset Checklist";
+                resetBtn.classList.add("btn-action");
+                resetBtn.onclick = function() { hapusSemuaChecklist(toko); };
+
+                let copyBtn = document.createElement("button");
+                copyBtn.textContent = "Salin Teks";
+                copyBtn.classList.add("btn-action");
+                copyBtn.onclick = function() { salinCatatanToko(toko); };
+
+                btnContainer.appendChild(resetBtn);
+                btnContainer.appendChild(copyBtn);
+                div.appendChild(btnContainer);
+                container.appendChild(div);
+            }
+
+            setTimeout(() => {
+                container.querySelectorAll('.pembelian-container').forEach(div => {
+                    let toko = div.querySelector('.nama-header').textContent;
+                    let scrollable = div.querySelector('.scrollable');
+                    if (toko && scrollable && scrollPositions[toko]) scrollable.scrollTop = scrollPositions[toko];
+                });
+            }, 10);
+        }
+
+        function toggleCheckItem(toko, item, jumlah, isChecked) {
+            let checkedItems = JSON.parse(localStorage.getItem(`checkedItems_${toko}`)) || {};
+
+            if (isChecked) {
+                const daftarToko = ["SUP SR", "SUP BL", "SUP APL", "SUP BB"].filter(t => t !== toko);
+
+                let optionsHTML = `<div style="text-align: left; font-size: 14px; margin-top: 15px;">
+                    <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer; color:var(--text-main);">
+                        <input type="radio" name="swal-alihan" value="" checked style="width: 18px; height: 18px; margin-right: 10px; accent-color:var(--primary);">
+                        <span style="font-weight:600;">Hanya Coret (Beli Selesai)</span>
+                    </label>
+                    <hr style="border: 0.5px solid var(--border); margin: 10px 0;">`;
+
+                daftarToko.forEach(t => {
+                    optionsHTML += `
+                    <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer; color:var(--text-main);">
+                        <input type="radio" name="swal-alihan" value="${t}" style="width: 18px; height: 18px; margin-right: 10px; accent-color:var(--primary);">
+                        <span>Alihkan ke <b>${t}</b></span>
+                    </label>`;
+                });
+                optionsHTML += `</div>`;
+
+                Swal.fire({
+                    title: 'Status Barang',
+                    html: `<div style="font-weight:bold; color:var(--primary); margin-bottom: 15px; font-size:16px;">${item}</div>` + optionsHTML,
+                    showCancelButton: true,
+                    confirmButtonText: 'Terapkan',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#00AA5B',
+                    preConfirm: () => {
+                        let selected = document.querySelector('input[name="swal-alihan"]:checked');
+                        return selected ? selected.value : "";
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let destToko = result.value;
+                        checkedItems[item] = true;
+                        localStorage.setItem(`checkedItems_${toko}`, JSON.stringify(checkedItems));
+
+                        if (destToko !== "") {
+                            if (!pembelian[destToko]) pembelian[destToko] = {};
+                            if (!pembelian[destToko][item]) pembelian[destToko][item] = 0;
+                            pembelian[destToko][item] += jumlah;
+
+                            alihanSuplier[`${toko}|${item}`] = { dest: destToko, qty: jumlah };
+                            localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+                            localStorage.setItem("pembelian", JSON.stringify(pembelian));
+                        }
+                        updatePembelianUI();
+                    } else { updatePembelianUI(); }
+                });
+
+            } else {
+                Swal.fire({
+                    title: 'Opsi Barang',
+                    html: `Apa yang ingin dilakukan pada <br><b style="color:var(--primary); font-size:16px;">${item}</b>?`,
+                    showDenyButton: true, showCancelButton: true,
+                    confirmButtonText: 'Batal Coret', confirmButtonColor: '#334155',
+                    denyButtonText: 'Hapus Permanen', denyButtonColor: '#EF144A',
+                    cancelButtonText: 'Tutup', reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        delete checkedItems[item];
+                        localStorage.setItem(`checkedItems_${toko}`, JSON.stringify(checkedItems));
+
+                        let currentSupBatal = toko;
+                        let alihanKeyAwal = `${currentSupBatal}|${item}`;
+
+                        if (alihanSuplier[alihanKeyAwal]) {
+                            let qtyBatal = alihanSuplier[alihanKeyAwal].qty;
+                            let loopBatal = 0;
+
+                            while (alihanSuplier[`${currentSupBatal}|${item}`] && loopBatal < 10) {
+                                let info = alihanSuplier[`${currentSupBatal}|${item}`];
+                                let dest = info.dest;
+
+                                if (pembelian[dest] && pembelian[dest][item] !== undefined) {
+                                    pembelian[dest][item] -= qtyBatal;
+                                    if (pembelian[dest][item] <= 0) {
+                                        delete pembelian[dest][item];
+                                        let chk = JSON.parse(localStorage.getItem(`checkedItems_${dest}`)) || {};
+                                        if(chk[item]) { delete chk[item]; localStorage.setItem(`checkedItems_${dest}`, JSON.stringify(chk)); }
+                                    }
+                                }
+
+                                info.qty -= qtyBatal;
+                                let keyUntukDihapus = `${currentSupBatal}|${item}`;
+                                currentSupBatal = dest;
+                                if (info.qty <= 0) { delete alihanSuplier[keyUntukDihapus]; }
+                                loopBatal++;
+                            }
+                            localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+                            localStorage.setItem("pembelian", JSON.stringify(pembelian));
+                        }
+                        updatePembelianUI();
+
+                    } else if (result.isDenied) {
+                        Swal.fire({
+                            title: 'Hapus Semua?',
+                            html: `Hapus <b>${item}</b> dari seluruh pesanan pelanggan?<br><br>Masukkan password:`,
+                            input: 'password', inputAttributes: { autocapitalize: 'off' },
+                            showCancelButton: true, confirmButtonText: 'Hapus Global', confirmButtonColor: '#EF144A',
+                            cancelButtonText: 'Batal',
+                            preConfirm: (kode) => {
+                                if (kode !== "ya") { Swal.showValidationMessage('Password salah!'); return false; }
+                                return true;
+                            }
+                        }).then((passResult) => {
+                            if (passResult.isConfirmed) {
+                                for (let konsumen in pesananPerKonsumen) {
+                                    let items = pesananPerKonsumen[konsumen].items;
+                                    for (let i = items.length - 1; i >= 0; i--) {
+                                        let iItem = items[i];
+                                        if (`${iItem.barang} ${iItem.satuan}` === item) {
+                                            pesananPerKonsumen[konsumen].totalHarga -= (iItem.harga * iItem.jumlah);
+                                            pesananPerKonsumen[konsumen].items.splice(i, 1);
+                                        }
+                                    }
+                                    if (pesananPerKonsumen[konsumen].items.length === 0) {
+                                        delete pesananPerKonsumen[konsumen];
+                                        daftarKios = daftarKios.filter(k => k !== konsumen);
+                                        localStorage.removeItem(`statusKios_${konsumen}`);
+                                    }
+                                }
+
+                                for (let t in pembelian) {
+                                    if (pembelian[t][item] !== undefined) delete pembelian[t][item];
+                                }
+                                for (let key in alihanSuplier) {
+                                    if (key.endsWith(`|${item}`)) delete alihanSuplier[key];
+                                }
+
+                                const daftarTokoAll = ["SUP SR", "SUP BL", "SUP APL", "SUP BB"];
+                                daftarTokoAll.forEach(t => {
+                                    let chk = JSON.parse(localStorage.getItem(`checkedItems_${t}`)) || {};
+                                    if (chk[item]) { delete chk[item]; localStorage.setItem(`checkedItems_${t}`, JSON.stringify(chk)); }
+                                });
+
+                                localStorage.setItem("pesananPerKonsumen", JSON.stringify(pesananPerKonsumen));
+                                localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+                                localStorage.setItem("pembelian", JSON.stringify(pembelian));
+                                localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+                                updatePesananUI(); updatePembelianUI();
+                            } else { updatePembelianUI(); }
+                        });
+                    } else { updatePembelianUI(); }
+                });
+            }
+        }
+
+        function hapusSemuaChecklist(toko) {
+            Swal.fire({
+                title: 'Reset Checklist?', text: `Barang yang dialihkan dari ${toko} akan ditarik kembali.`, icon: 'warning',
+                showCancelButton: true, confirmButtonText: 'Ya, Reset', cancelButtonText: 'Batal', confirmButtonColor: '#00AA5B'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let checkedItems = JSON.parse(localStorage.getItem(`checkedItems_${toko}`)) || {};
+                    for (let item in checkedItems) {
+                        let currentSupReset = toko;
+                        let alihanKeyReset = `${currentSupReset}|${item}`;
+
+                        if (alihanSuplier[alihanKeyReset]) {
+                            let qtyBatal = alihanSuplier[alihanKeyReset].qty;
+                            let loopReset = 0;
+
+                            while (alihanSuplier[`${currentSupReset}|${item}`] && loopReset < 10) {
+                                let info = alihanSuplier[`${currentSupReset}|${item}`];
+                                let dest = info.dest;
+
+                                if (pembelian[dest] && pembelian[dest][item] !== undefined) {
+                                    pembelian[dest][item] -= qtyBatal;
+                                    if (pembelian[dest][item] <= 0) {
+                                        delete pembelian[dest][item];
+                                        let chk = JSON.parse(localStorage.getItem(`checkedItems_${dest}`)) || {};
+                                        if(chk[item]) { delete chk[item]; localStorage.setItem(`checkedItems_${dest}`, JSON.stringify(chk)); }
+                                    }
+                                }
+                                info.qty -= qtyBatal;
+                                let keyUntukDihapus = `${currentSupReset}|${item}`;
+                                currentSupReset = dest;
+                                if (info.qty <= 0) delete alihanSuplier[keyUntukDihapus];
+                                loopReset++;
+                            }
+                        }
+                    }
+                    localStorage.removeItem(`checkedItems_${toko}`);
+                    localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+                    localStorage.setItem("pembelian", JSON.stringify(pembelian));
+                    updatePembelianUI();
+                }
+            });
+        }
+
+        function tambahPesanan() {
+            let namaPemesan = document.getElementById("namaPemesan").value.trim().toUpperCase();
+            let barang = document.getElementById("inputBarang").value.trim();
+            let jumlah = parseFloat(document.getElementById("jumlah").value);
+            let harga = parseFloat(document.getElementById("hargaAsli").value);
+            let hargaSatuan = parseFloat(document.getElementById("hargaSatuanAsli").value) || 0;
+            let satuan = document.getElementById("satuanTampil").value;
+            let supplier = document.getElementById("supplierAsli").value;
+            let varianTerpilih = document.getElementById("pilihVarian").value;
+
+            if (document.getElementById("containerVarian").style.display === "flex") {
+                if (varianTerpilih === "") {
+                    Swal.fire({icon: 'warning', title: 'Oops...', text: 'Pilih salah satu varian di bawah nama barang!'});
+                    return;
+                }
+                barang = `${barang} (${varianTerpilih})`;
+            }
+
+            if (!namaPemesan || !barang || isNaN(jumlah) || jumlah <= 0 || isNaN(harga) || !satuan) {
+                Swal.fire({icon: 'warning', title: 'Data Belum Lengkap', text: 'Pastikan barang diklik dari daftar dan jumlah diisi!'});
+                return;
+            }
+
+            if (!pesananPerKonsumen[namaPemesan]) {
+                pesananPerKonsumen[namaPemesan] = { items: [], totalHarga: 0 };
+                if (!daftarKios.includes(namaPemesan)) daftarKios.unshift(namaPemesan);
+            }
+
+            let existingItemIndex = pesananPerKonsumen[namaPemesan].items.findIndex(i => i.barang === barang && i.satuan === satuan && i.harga === harga);
+
+            if (existingItemIndex !== -1) {
+                pesananPerKonsumen[namaPemesan].items[existingItemIndex].jumlah += jumlah;
+                pesananPerKonsumen[namaPemesan].items[existingItemIndex].dikemas = false;
+            } else {
+                pesananPerKonsumen[namaPemesan].items.unshift({ barang: barang, jumlah: jumlah, satuan: satuan, harga: harga, hargaSatuan: hargaSatuan, supplier: supplier, dikemas: false });
+            }
+            pesananPerKonsumen[namaPemesan].totalHarga += (harga * jumlah);
+
+            localStorage.setItem("pesananPerKonsumen", JSON.stringify(pesananPerKonsumen));
+            localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+
+            updatePesananUI();
+
+            let key = `${barang} ${satuan}`;
+            if (!pembelian[supplier]) pembelian[supplier] = {};
+            if (!pembelian[supplier][key]) pembelian[supplier][key] = 0;
+            pembelian[supplier][key] += jumlah;
+
+            let currentSup = supplier; let loopSafe = 0;
+            while (alihanSuplier[`${currentSup}|${key}`] && loopSafe < 10) {
+                let infoAlihan = alihanSuplier[`${currentSup}|${key}`];
+                let tokoTujuan = infoAlihan.dest;
+                if (!pembelian[tokoTujuan]) pembelian[tokoTujuan] = {};
+                if (!pembelian[tokoTujuan][key]) pembelian[tokoTujuan][key] = 0;
+                pembelian[tokoTujuan][key] += jumlah;
+                infoAlihan.qty += jumlah; currentSup = tokoTujuan; loopSafe++;
+            }
+
+            localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+            localStorage.setItem("pembelian", JSON.stringify(pembelian));
+            updatePembelianUI();
+
+            document.getElementById("inputBarang").value = "";
+            document.getElementById("jumlah").value = "";
+            document.getElementById("hargaTampil").value = "";
+            document.getElementById("satuanTampil").value = "";
+            document.getElementById("total").value = "";
+            document.getElementById("pilihVarian").value = "";
+            document.getElementById("containerVarian").style.display = "none";
+
+            let notifikasi = document.getElementById("notifikasi");
+            notifikasi.style.display = "block";
+            setTimeout(() => { notifikasi.style.display = "none"; }, 2000);
+        }
+
+        function tampilkanRekomendasi(input) {
+            let rekomendasi = document.getElementById("rekomendasiBarang");
+            rekomendasi.innerHTML = "";
+
+            if (input.length === 0) { rekomendasi.style.display = "none"; return; }
+            let hasil = katalogData.filter(item => item.nama.toLowerCase().includes(input.toLowerCase()));
+
+            if (hasil.length > 0) {
+                hasil.forEach(item => {
+                    let div = document.createElement("div");
+                    div.innerHTML = `<strong>${item.nama}</strong> - <span style="color:var(--text-muted)">${item.satuan} (Rp${formatAngka(item.harga)})</span>`;
+
+                    div.onclick = function () {
+                        document.getElementById("inputBarang").value = item.nama;
+                        document.getElementById("satuanTampil").value = item.satuan;
+                        document.getElementById("hargaTampil").value = "Rp" + formatAngka(item.harga);
+                        document.getElementById("hargaAsli").value = item.harga;
+                        document.getElementById("hargaSatuanAsli").value = item.hargaSatuan || 0;
+                        document.getElementById("supplierAsli").value = item.supplier;
+
+                        let containerVarian = document.getElementById("containerVarian");
+                        let pilihVarianHidden = document.getElementById("pilihVarian");
+                        containerVarian.innerHTML = '';
+                        pilihVarianHidden.value = '';
+
+                        if (item.varian && item.varian.length > 0) {
+                            containerVarian.style.display = "flex";
+                            item.varian.forEach(v => {
+                                let btn = document.createElement("button");
+                                btn.textContent = v;
+                                btn.type = "button";
+                                btn.classList.add("btn-varian");
+
+                                btn.onclick = function() {
+                                    pilihVarianHidden.value = v;
+                                    Array.from(containerVarian.children).forEach(b => b.classList.remove("active"));
+                                    btn.classList.add("active");
+                                    document.getElementById("jumlah").focus({ preventScroll: true });
+                                };
+                                containerVarian.appendChild(btn);
+                            });
+                            rekomendasi.style.display = "none"; hitungTotalPesanan();
+                        } else {
+                            containerVarian.style.display = "none";
+                            rekomendasi.style.display = "none";
+                            hitungTotalPesanan();
+                            setTimeout(() => { document.getElementById("jumlah").focus({ preventScroll: true }); }, 100);
+                        }
+                    };
+                    rekomendasi.appendChild(div);
+                });
+                rekomendasi.style.display = "block";
+            } else { rekomendasi.style.display = "none"; }
+        }
+
+        function hapusKios(konsumen) {
+            Swal.fire({
+                title: 'Konfirmasi', text: `Masukkan password untuk menghapus kios ${konsumen}:`,
+                input: 'password', inputAttributes: { autocapitalize: 'off' },
+                showCancelButton: true, confirmButtonText: 'Hapus', confirmButtonColor: '#EF144A',
+                preConfirm: (kode) => {
+                    if (kode === "septa") {
+                        let items = pesananPerKonsumen[konsumen]?.items || [];
+                        for (let item of items) {
+                            let toko = item.supplier;
+                            let key = item.barang + " " + item.satuan;
+                            let hapusJumlah = item.jumlah;
+
+                            if (toko && pembelian[toko] && pembelian[toko][key] !== undefined) {
+                                pembelian[toko][key] -= hapusJumlah;
+                                if (pembelian[toko][key] <= 0) {
+                                    delete pembelian[toko][key];
+                                    let chk = JSON.parse(localStorage.getItem(`checkedItems_${toko}`)) || {};
+                                    if(chk[key]) { delete chk[key]; localStorage.setItem(`checkedItems_${toko}`, JSON.stringify(chk)); }
+                                }
+                            }
+
+                            let currentSupHapus = toko; let loopSafeHapus = 0;
+                            while (alihanSuplier[`${currentSupHapus}|${key}`] && loopSafeHapus < 10) {
+                                let infoAlihan = alihanSuplier[`${currentSupHapus}|${key}`];
+                                let tokoTujuan = infoAlihan.dest;
+                                if (pembelian[tokoTujuan] && pembelian[tokoTujuan][key] !== undefined) {
+                                    pembelian[tokoTujuan][key] -= hapusJumlah;
+                                    if (pembelian[tokoTujuan][key] <= 0) {
+                                        delete pembelian[tokoTujuan][key];
+                                        let chkDest = JSON.parse(localStorage.getItem(`checkedItems_${tokoTujuan}`)) || {};
+                                        if(chkDest[key]) { delete chkDest[key]; localStorage.setItem(`checkedItems_${tokoTujuan}`, JSON.stringify(chkDest)); }
+                                    }
+                                }
+                                infoAlihan.qty -= hapusJumlah;
+                                let keyUntukDihapus = `${currentSupHapus}|${key}`;
+                                currentSupHapus = tokoTujuan;
+                                if (infoAlihan.qty <= 0) delete alihanSuplier[keyUntukDihapus];
+                                loopSafeHapus++;
+                            }
+                        }
+                        delete pesananPerKonsumen[konsumen];
+                        daftarKios = daftarKios.filter(kios => kios !== konsumen);
+                        localStorage.removeItem(`statusKios_${konsumen}`);
+                        localStorage.setItem("pesananPerKonsumen", JSON.stringify(pesananPerKonsumen));
+                        localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+                        localStorage.setItem("pembelian", JSON.stringify(pembelian));
+                        localStorage.setItem("alihanSuplier", JSON.stringify(alihanSuplier));
+                        updatePesananUI(); updatePembelianUI();
+                    } else { Swal.fire({icon: 'error', text: 'Password salah!'}); }
+                }
+            });
+        }
+
+        function tandaiKios(namaKios, warna) {
+            if (!klikCounter[namaKios]) klikCounter[namaKios] = { count: 0, timeout: null };
+            if (klikCounter[namaKios].timeout) clearTimeout(klikCounter[namaKios].timeout);
+            klikCounter[namaKios].count++;
+            klikCounter[namaKios].timeout = setTimeout(() => { klikCounter[namaKios].count = 0; }, 1500);
+
+            if (klikCounter[namaKios].count >= 2) {
+                klikCounter[namaKios].count = 0;
+                let statusSaatIni = localStorage.getItem(`statusKios_${namaKios}`);
+                if (statusSaatIni === warna) localStorage.removeItem(`statusKios_${namaKios}`);
+                else localStorage.setItem(`statusKios_${namaKios}`, warna);
+
+                perbaruiKelasKios(namaKios);
+            }
+        }
+
+        function salinKeClipboard(teks) {
+            let textarea = document.createElement("textarea");
+            textarea.value = teks; document.body.appendChild(textarea); textarea.select();
+            try { document.execCommand("copy"); Swal.fire({icon: 'success', title: 'Tersalin!', timer: 1500, showConfirmButton: false}); }
+            catch (err) { Swal.fire({icon: 'error', title: 'Gagal menyalin.'}); }
+            document.body.removeChild(textarea);
+        }
+
+        function salinCatatan(konsumen) {
+            let catatan = `# Gudang Kayu Manis\n\n${new Date().toLocaleDateString('id-ID')}\nSales: Septa Hadif\n\n---\n\n## ${konsumen.toUpperCase()}\n\n`;
+            catatan += pesananPerKonsumen[konsumen].items.map((item, i) => {
+                let hsTeks = (item.hargaSatuan && item.hargaSatuan > 0) ? ` (Rp${formatAngka(item.hargaSatuan)})` : '';
+                return `${i + 1}. ${item.barang}\n     ${item.jumlah} ${item.satuan} x Rp${formatAngka(item.harga)}${hsTeks}     Rp${formatAngka(item.harga * item.jumlah)}`;
+            }).join('\n\n');
+            catatan += `\n\nTotal: Rp${pesananPerKonsumen[konsumen].totalHarga.toLocaleString('id-ID')}`;
+            salinKeClipboard(catatan);
+        }
+
+        async function bagikanCatatan(konsumen) {
+            let catatanHTML = pesananPerKonsumen[konsumen].items.map((item, i) => {
+                let hsTeks = (item.hargaSatuan && item.hargaSatuan > 0) ? ` (Rp${formatAngka(item.hargaSatuan)})` : '';
+                return `
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: bold;">${i + 1}. ${item.barang}</div>
+                    <div style="margin-left: 20px; display: flex; justify-content: space-between;">
+                        <span style="white-space: nowrap;">${item.jumlah} ${item.satuan} x Rp${formatAngka(item.harga)}${hsTeks}</span>
+                        <span style="white-space: nowrap; margin-left: 10px;">Rp${formatAngka(item.harga * item.jumlah)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const notaHTML = `<div class="nota"><h2>Gudang Kayu Manis</h2><div class="line"></div><div><strong>${new Date().toLocaleDateString('id-ID')}</strong></div><div class="line"></div><div><strong>Sales:</strong> Septa Hadif</div><div class="line"></div><h3>${konsumen.toUpperCase()}</h3><div class="line"></div>${catatanHTML}<div class="line"></div><div class="total">Total: Rp${pesananPerKonsumen[konsumen].totalHarga.toLocaleString('id-ID')}</div><div class="line"></div><div class="footer">Terima kasih atas pesanan Anda!</div></div>`;
+
+            const notaDiv = document.createElement("div");
+            notaDiv.innerHTML = notaHTML;
+            notaDiv.style.position = "absolute"; notaDiv.style.top = "-9999px"; notaDiv.style.left = "-9999px";
+            document.body.appendChild(notaDiv);
+
+            try {
+                const canvas = await html2canvas(notaDiv, { scale: 2, windowWidth: 600 });
+                const dataUrl = canvas.toDataURL("image/png");
+                if (navigator.share) await navigator.share({ files: [new File([await (await fetch(dataUrl)).blob()], `nota-${konsumen}.png`, { type: "image/png" })] });
+                else Swal.fire({icon: 'error', text: 'Fitur berbagi tidak didukung.'});
+            } catch (error) { Swal.fire({icon: 'error', text: 'Gagal membagikan nota.'}); }
+            finally { document.body.removeChild(notaDiv); }
+        }
+
+        function salinCatatanToko(toko) {
+            let checkedItems = JSON.parse(localStorage.getItem(`checkedItems_${toko}`)) || {};
+            let catatan = ""; let nomor = 1;
+            Object.entries(pembelian[toko] || {}).forEach(([item, jumlah]) => {
+                if (!checkedItems[item]) {
+                    let lastSpaceIndex = item.lastIndexOf(" ");
+                    catatan += `${nomor}. ${item.substring(0, lastSpaceIndex)}: ${jumlah} ${item.substring(lastSpaceIndex + 1)}\n\n`;
+                    nomor++;
+                }
+            });
+            salinKeClipboard(catatan === "" ? "Semua item sudah dicentang" : catatan);
+        }
+
+        async function eksporDataKeSheet() {
+            const namaSales = document.getElementById("identitasSales").value.trim().toUpperCase();
+            if (!namaSales) return Swal.fire({icon: 'warning', text: 'Harap isi Nama/ID Sales terlebih dahulu!'});
+            Swal.fire({title: 'Mengunggah Data...', allowOutsideClick: false, didOpen: () => {Swal.showLoading()}});
+
+            const dataAplikasi = {
+                pesananPerKonsumen: JSON.parse(localStorage.getItem("pesananPerKonsumen")) || {},
+                pembelian: JSON.parse(localStorage.getItem("pembelian")) || {},
+                daftarKios: JSON.parse(localStorage.getItem("daftarKios")) || [],
+                alihanSuplier: JSON.parse(localStorage.getItem("alihanSuplier")) || {},
+                statusKios: {}, checkedItems: {}
+            };
+
+            for (let k of dataAplikasi.daftarKios) { let st = localStorage.getItem(`statusKios_${k}`); if(st) dataAplikasi.statusKios[k] = st; }
+            ["SUP SR", "SUP BL", "SUP APL", "SUP BB"].forEach(t => {
+                let chk = JSON.parse(localStorage.getItem(`checkedItems_${t}`)) || {}; if(Object.keys(chk).length > 0) dataAplikasi.checkedItems[t] = chk;
+            });
+
+            try {
+                const response = await fetch(URL_GAS_API, { method: "POST", body: JSON.stringify({ namaSales: namaSales, data: dataAplikasi }) });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    Swal.fire({icon: 'success', title: 'Data tersimpan di Cloud!', timer: 1500, showConfirmButton: false});
+                    localStorage.setItem("namaSalesTersimpan", namaSales);
+                } else { Swal.fire({icon: 'error', title: 'Gagal', text: result.message}); }
+            } catch (error) { Swal.fire({icon: 'error', text: 'Koneksi internet bermasalah.'}); }
+        }
+
+        async function imporDataDariSheet() {
+            const namaSales = document.getElementById("identitasSales").value.trim().toUpperCase();
+            if (!namaSales) return Swal.fire({icon: 'warning', text: 'Isi Nama/ID Sales untuk mencari datamu!'});
+
+            const { value: pwd } = await Swal.fire({ title: 'Masukkan Password:', input: 'password', showCancelButton: true });
+            if (pwd !== "123") return Swal.fire({icon: 'error', text: 'Password salah!'});
+
+            Swal.fire({title: 'Menarik Data...', allowOutsideClick: false, didOpen: () => {Swal.showLoading()}});
+
+            try {
+                const response = await fetch(`${URL_GAS_API}?namaSales=${encodeURIComponent(namaSales)}`);
+                const result = await response.json();
+                if (result.status === "error") throw new Error(result.message);
+
+                const data = result.data;
+                localStorage.setItem("pesananPerKonsumen", JSON.stringify(data.pesananPerKonsumen || {}));
+                localStorage.setItem("pembelian", JSON.stringify(data.pembelian || {}));
+                localStorage.setItem("daftarKios", JSON.stringify(data.daftarKios || []));
+                localStorage.setItem("alihanSuplier", JSON.stringify(data.alihanSuplier || {}));
+                alihanSuplier = data.alihanSuplier || {};
+
+                if (data.statusKios) Object.entries(data.statusKios).forEach(([k, s]) => localStorage.setItem(`statusKios_${k}`, s));
+                if (data.checkedItems) Object.entries(data.checkedItems).forEach(([t, c]) => localStorage.setItem(`checkedItems_${t}`, JSON.stringify(c)));
+
+                localStorage.setItem("namaSalesTersimpan", namaSales);
+                muatDataDariLocalStorage(); updatePesananUI(); updatePembelianUI();
+                Swal.fire({icon: 'success', title: 'Data dipulihkan!', timer: 1500, showConfirmButton: false});
+            } catch (error) { Swal.fire({icon: 'error', title: 'Gagal Impor', text: error.message}); }
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            let savedSales = localStorage.getItem("namaSalesTersimpan");
+            if (savedSales) { let idSalesEl = document.getElementById("identitasSales"); if (idSalesEl) idSalesEl.value = savedSales; }
+
+            muatDataDariLocalStorage(); sinkronkanDaftarKios(); updatePesananUI(); updatePembelianUI();
+            await muatDataDariKatalog();
+
+            let namaPemesan = localStorage.getItem("namaPemesan");
+            if (namaPemesan) document.getElementById("namaPemesan").value = namaPemesan;
+
+            document.getElementById("namaPemesan").addEventListener("input", function(e) {
+                this.value = this.value.toUpperCase(); localStorage.setItem("namaPemesan", this.value);
+            });
+
+            document.getElementById("inputBarang").addEventListener("input", function (e) {
+                tampilkanRekomendasi(e.target.value);
+                document.getElementById("hargaTampil").value = ""; document.getElementById("hargaAsli").value = "";
+                document.getElementById("hargaSatuanAsli").value = ""; document.getElementById("satuanTampil").value = "";
+                document.getElementById("total").value = ""; document.getElementById("pilihVarian").value = "";
+                document.getElementById("containerVarian").style.display = "none";
+            });
+
+            document.getElementById("jumlah").addEventListener("input", hitungTotalPesanan);
+            document.getElementById("jumlah").addEventListener("blur", function() {
+                if (isNaN(parseFloat(this.value)) || parseFloat(this.value) <= 0) { this.value = ""; document.getElementById("total").value = ""; }
+            });
+
+            // OPTIMASI SORTABLEJS UNTUK AUTO-SCROLL AGAR SANGAT HALUS DAN CEPAT MERESPONS KE ATAS
+            const daftarPesananArea = document.getElementById('daftarPesanan');
+            new Sortable(daftarPesananArea, {
+                animation: 150, // Dipercepat agar perpindahan instan
+                handle: ".drag-handle",
+                forceFallback: true,
+                fallbackClass: "nota-mengambang",
+                chosenClass: "nota-diangkat",
+                ghostClass: "nota-bayangan",
+                scroll: true,          // Mengaktifkan fitur auto-scroll bawaan
+                scrollSensitivity: 80, // Jarak piksel sensor tepi layar diperlebar agar cepat merespons
+                scrollSpeed: 20,       // Kecepatan gulir layar saat menyeret elemen ke atas/bawah
+                bubbleScroll: true,    // Mendukung scroll hierarki dokumen dengan mulus
+                filter: ".scrollable, button", preventOnFilter: false,
+                onEnd: function (evt) {
+                    let itemNota = document.querySelectorAll('#daftarPesanan .pesanan-container');
+                    let urutanBaru = [];
+                    itemNota.forEach(item => { let namaKios = item.getAttribute('data-kios'); if (namaKios) urutanBaru.push(namaKios); });
+                    daftarKios = urutanBaru; localStorage.setItem("daftarKios", JSON.stringify(daftarKios));
+                }
+            });
+        });
+
+        window.addEventListener('storage', function(e) {
+            if (['pesananPerKonsumen', 'pembelian', 'checkedItems', 'alihanSuplier'].includes(e.key)) {
+                muatDataDariLocalStorage(); updatePesananUI(); updatePembelianUI();
+            }
+        });
+    </script>
+</body>
+</html>

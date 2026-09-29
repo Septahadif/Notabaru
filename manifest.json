@@ -1,0 +1,22 @@
+{
+  "name": "Catatan Pesanan Konsumen",
+  "short_name": "Nota Konsumen",
+  "description": "Aplikasi pencatatan pesanan konsumen, rekap suplier, dan sinkronisasi cloud.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#00AA5B",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "shopping"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
